@@ -1,7 +1,7 @@
 var mongoose = require('mongoose');
 var hash = require('../util/hash');
 var LocalUserSchema = new mongoose.Schema({
-	username: String,
+	name: String,
 	salt: String,
 	hash: String
 });
@@ -12,7 +12,7 @@ LocalUserSchema.statics.signup = function(username, password, done){
 		if(err) throw err;
 		// if (err) return done(err);
 		User.create({
-			username : username,
+			name : username,
 			salt : salt,
 			hash : hash
 		}, function(err, user){

@@ -15,7 +15,10 @@ var FACEBOOK_APP_ID = "1683238675223733"
 var FACEBOOK_APP_SECRET = "fd3d43bee8405f186bf701ade4bd500d";
 var hash = require('./util/hash');
 
-mongoose.connect("mongodb://localhost/ChemistApplication");
+//mongoose.connect("mongodb://localhost/ChemistApplication");
+
+
+mongoose.connect("mongodb://wt:wt@ds045704.mongolab.com:45704/table");
 
 var session = require('express-session');
 var MongoStore = require('connect-mongo')(session);
@@ -140,7 +143,7 @@ function userExist(req, res, next) {
 
 app.get("/", function(req, res){ 
 		if(req.isAuthenticated()){
-		  res.render("home", { user : req.user}); 
+		  res.render("home", { user : req.user.name}); 
 		}else{
 			res.render("home", { user : null});
 		}
@@ -175,12 +178,12 @@ app.get("/", function(req, res){
 	app.get("/auth/facebook/callback", 
 		passport.authenticate("facebook",{ failureRedirect: '/login',successRedirect:'/profile'}),
 		function(req,res){
-			res.render("profile", {user : req.user});
+			res.render("profile", {user : req.user.name});
 		}
 	);
 	
 	app.get("/profile", authenticatedOrNot , function(req, res){ 
-		res.render("profile", { user : req.user});
+		res.render("profile", { user : req.user.name});
 	});
 
 	app.get('/logout', function(req, res){
