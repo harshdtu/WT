@@ -10,6 +10,7 @@ var FacebookUser = require('./models/facebookuser');
 var LocalUser = require('./models/localuser');
 var LocalStrategy = require('passport-local').Strategy;
 var FacebookStrategy = require('passport-facebook').Strategy;
+var flash = require('connect-flash');
 //var Auth = require('../authorization.js');
 var FACEBOOK_APP_ID = "1683238675223733"
 var FACEBOOK_APP_SECRET = "fd3d43bee8405f186bf701ade4bd500d";
@@ -21,7 +22,7 @@ var hash = require('./util/hash');
 mongoose.connect("mongodb://wt:wt@ds045704.mongolab.com:45704/table");
 
 var session = require('express-session');
-var MongoStore = require('connect-mongo')(session);
+//var MongoStore = require('connect-mongo')(session);
 
 
 //var users = require('./routes/users');
@@ -45,6 +46,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(session({secret: 'SECRET'}));
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(flash());
 
 //app.use('/', routes);
 //app.use('/users', users);
@@ -57,7 +59,7 @@ app.use(passport.session());
 
 
 passport.use(new LocalStrategy(function(username, password, done){
-    LocalUser.findOne({username: username}, function(err, user){
+    LocalUser.findOne({name: username}, function(err, user){
         if(err) {
           return done(err);
         }
@@ -101,17 +103,21 @@ passport.use(new FacebookStrategy({
 ));
 
 passport.serializeUser( function( user, done){
+  console.log("[DEBUG][passport][serializeUser] %j", user);
   done(null, user.id);
 });
+
 
 passport.deserializeUser( function(id, done){
   FacebookUser.findById(id, function(err, user){
     if(err) done(err);
     if(user){
+      console.log("[DEBUG][passport][deserializeUser] %j", user);
       done(null, user);
     } else {
       LocalUser.findById(id, function(err, user){
         if(err) done(err);
+        console.log("[DEBUG][passport][deserializeUser] %j", user);
         done(null, user);
       });
     }
@@ -130,7 +136,7 @@ function authenticatedOrNot(req, res, next){
 
 function userExist(req, res, next) {
     LocalUser.count({
-        username: req.body.username
+        name: req.body.username
     }, function (err, count) {
         if (count === 0) {
             next();
@@ -143,48 +149,50 @@ function userExist(req, res, next) {
 
 app.get("/", function(req, res){ 
 		if(req.isAuthenticated()){
-		  res.render("home", { user : req.user.name}); 
+		  res.render("home", { user : req.user}); 
 		}else{
 			res.render("home", { user : null});
 		}
-	});
+});
 	
-	app.get("/login", function(req, res){ 
+app.get("/login", function(req, res){ 
 		res.render("login");
-	});
+});
 	
-	app.post("/login" 
+app.post("/login" 
 		,passport.authenticate('local',{
 			successRedirect : "/",
 			failureRedirect : "/login",
-		})
-	);
+      failureFlash: true
+		}
+  )
+);
 	
-	app.get("/signup", function (req, res) {
+app.get("/signup", function (req, res) {
 		res.render("signup");
-	});
+});
 	
-	app.post("/signup", userExist, function (req, res, next) {
-		LocalUser.signup(req.body.username, req.body.password, function(err, user){
+app.post("/signup", userExist, function (req, res, next) {
+		LocalUser.signup(req.body.email, req.body.username, req.body.password, function(err, user){
 			if(err) throw err;
 			req.login(user, function(err){
 				if(err) return next(err);
 				return res.redirect("profile");
 			});
 		});
-	});
+});
 	
 	app.get("/auth/facebook", passport.authenticate("facebook",{ scope : "email"}));
 	app.get("/auth/facebook/callback", 
 		passport.authenticate("facebook",{ failureRedirect: '/login',successRedirect:'/profile'}),
 		function(req,res){
-			res.render("profile", {user : req.user.name});
+			res.render("profile", {user : req.user});
 		}
 	);
 	
-	app.get("/profile", authenticatedOrNot , function(req, res){ 
-		res.render("profile", { user : req.user.name});
-	});
+app.get("/profile", authenticatedOrNot , function(req, res){ 
+		res.render("profile", { user : req.user});
+});
 
 	app.get('/logout', function(req, res){
 		req.logout();
